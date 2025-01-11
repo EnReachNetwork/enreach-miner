@@ -13,6 +13,8 @@ if (!existsSync(envPath)) {
 
 export const ENV = {
   MNEMONIC: process.env.MNEMONIC || "",
+  CLIENT_ID: process.env.CLIENT_ID || "",
+  TRACKER_URL: process.env.TRACKER_URL || "http://localhost:30000",
   MANAGER_URL: process.env.MANAGER_URL || "ws://localhost",
   MANAGER_PORT: parseInt(process.env.MANAGER_PORT || "6677", 10),
   HEARTBEAT_INTERVAL: parseInt(process.env.HEARTBEAT_INTERVAL || "5000", 10),

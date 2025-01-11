@@ -1,57 +1,28 @@
 #!/usr/bin/env node
-import { Command } from "commander";
-import { registerHelloCommand } from "./commands/hello.js";
-import { registerRegisterCommand } from "./commands/register.js";
+import {Command} from "commander";
+import {registerHelloCommand} from "./commands/hello.js";
+import {registerRegisterCommand} from "./commands/register.js";
 import WebSocket from "ws";
-import { logger } from "./utils/logger.js";
-import { WorkReport } from "./types/work.js";
-import { Message } from "./types/ws.js";
-import { validateConfig } from "./config/validate.js";
-import WebTorrent from "webtorrent";
+import {logger} from "./utils/logger.js";
+import {validateConfig} from "./config/validate.js";
+import {registerAddCommand} from "./commands/add.js";
+import {uploadWorkReport} from "./work-report.js";
+import {startTaskProcessor} from "./task.js";
+import {startWebTorrentClient} from "./webtorrent.js";
+import TorrentManager from "./torrent-manager.js";
 
 const program = new Command();
 
 let ws: WebSocket | null = null;
-let heartbeatInterval: NodeJS.Timer | null = null;
-
-function uploadWorkReport(peerId: string, interval: number = 20000) {
-  if (heartbeatInterval) {
-    // @ts-ignore
-    clearInterval(heartbeatInterval);
-  }
-
-  heartbeatInterval = setInterval(async () => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      try {
-        const startTime = Math.floor(Date.now() / 1000);
-        const wr: WorkReport = {
-          peerId,
-          start_time: startTime,
-          end_time: startTime + 60,
-          upload_volume: 1000,
-          download_volume: 1000,
-          upload_time: 3600,
-          download_time: 3600,
-        };
-        const msg: Message<WorkReport> = {
-          type: "upload_work_report",
-          message: wr,
-        };
-        ws.send(JSON.stringify(msg));
-        logger.info("Status report sent");
-      } catch (error) {
-        logger.error(`Failed to send status report: ${error}`);
-      }
-    }
-  }, interval);
-}
 
 async function connectToManager(url: string) {
   ws = new WebSocket(url);
 
   ws.on("open", () => {
     logger.success("Connected to manager");
-    uploadWorkReport("enreach159g9gm93y84cawdkpnlaqvyew4gddspalujug7");
+    if (ws) {
+      uploadWorkReport(ws, "enreach159g9gm93y84cawdkpnlaqvyew4gddspalujug7");
+    }
   });
 
   ws.on("message", (data) => {
@@ -78,13 +49,40 @@ program
   .description("CLI application built with Commander.js")
   .version("0.0.1")
   .action(async () => {
+    console.log(22222222222222222)
     await validateConfig();
-    logger.success("Started webtorrent client");
-    const client = new WebTorrent();
-    await connectToManager("http://localhost:6677");
+    // await connectToManager("http://localhost:6677");
+    const client = await startWebTorrentClient()
+    const torrentManager = new TorrentManager(client);
+    await startTaskProcessor(torrentManager);
+
+    await torrentManager.loadState();
+
+    setInterval(() => {
+      torrentManager.saveState();
+    },  60 * 1000);
+
+    setInterval(() => {
+      const report = torrentManager.generateReport();
+      console.log(report);
+    }, 60 * 1000);
+
+    // client.on('torrent', (torrent) => {
+    //   logger.info(torrent.infoHash)
+    //   torrent.on('wire', (wire, addr) => {
+    //     console.log("wire, ", wire.peerId.toString())
+    //     wire.on('download', (downloaded) => {
+    //       logger.info(`Downloaded: ${downloaded}`)
+    //     })
+    //     wire.on('upload', (uploaded) => {
+    //       logger.info(`Uploaded: ${uploaded}`);
+    //     })
+    //   })
+    // });
   });
 
 registerHelloCommand(program);
 registerRegisterCommand(program);
+registerAddCommand(program);
 
 program.parse();

@@ -26,7 +26,20 @@ export function validateConfig() {
       validator: (v) => typeof v === "string" && v.trim().length > 0,
       message: "MNEMONIC is required and cannot be empty",
     },
-
+    {
+      value: ENV.CLIENT_ID,
+      name: "CLIENT_ID",
+      required: true,
+      validator: (v) => typeof v === "string" && v.trim().length > 0,
+      message: "CLIENT_ID is required and cannot be empty",
+    },
+    {
+      value: ENV.TRACKER_URL,
+      name: "TRACKER_URL",
+      required: true,
+      validator: (v) => typeof v === "string" && v.trim().length > 0,
+      message: "TRACKER_URL is required and cannot be empty",
+    },
     {
       value: ENV.MANAGER_URL,
       name: "MANAGER_URL",
